@@ -1,9 +1,10 @@
 class Spaceship extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, texture, frame, pointValue){
-        super(scene, x, y, texture, frame);
+    constructor(scene, x, y, frame, shipCont){
+        super(scene, x, y, shipCont.texture, frame);
         scene.add.existing(this);
-        this.points = pointValue;
-        this.moveSpeed = game.settings.spaceshipSpeed;
+        shipCont.pointVal -= shipCont.pointVal % 10;
+        this.points = shipCont.pointVal;
+        this.moveSpeed = game.settings.spaceshipSpeed + shipCont.moveSpdMod;
     }
     update(){
         this.x -= this.moveSpeed;
@@ -12,6 +13,7 @@ class Spaceship extends Phaser.GameObjects.Sprite {
         }
     }
     reset(){
+        console.log(this.texture);
         this.x = game.config.width;
     }
 }

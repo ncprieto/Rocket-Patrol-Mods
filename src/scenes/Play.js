@@ -1,10 +1,21 @@
+let regShip = {
+    texture: 'spaceship1',
+    pointVal: Math.floor(Math.random() * (40 - 10) + 10),
+    moveSpdMod: 0
+};
+let specShip = {
+    texture: 'spaceship2',
+    pointVal: 60,
+    moveSpdMod: 2
+};
 class Play extends Phaser.Scene{
     constructor(){
         super("playScene");
     }
     preload(){
         this.load.image('rocket', './assets/rocket.png');
-        this.load.image('spaceship', './assets/spaceship.png');
+        this.load.image('spaceship1', './assets/spaceship1.png');
+        this.load.image('spaceship2', './assets/spaceship2.png');
         this.load.image('starfield', './assets/starfield.png');
         // load spritesheet
         this.load.spritesheet('explosion', './assets/explosion.png', {frameWidth: 64, frameHeight: 32, startFrame: 0, endFrame: 9});
@@ -21,10 +32,13 @@ class Play extends Phaser.Scene{
         this.add.rectangle(game.config.width - borderUISize, 0, borderUISize, game.config.height, 0xFFFFFF).setOrigin(0, 0);
         // add rocket (p1)
         this.p1Rocket = new Rocket(this, game.config.width/2, game.config.height - borderUISize - borderPadding, 'rocket').setOrigin(0.5, 0);
-          // add spaceships (x3)
-        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 'spaceship', 0, 30).setOrigin(0, 0);
-        this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 'spaceship', 0, 20).setOrigin(0,0);
-        this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 'spaceship', 0, 10).setOrigin(0,0);
+        // add spaceships (x3)
+        let curShip = this.getRandomShip([regShip, specShip]);
+        this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 0, curShip).setOrigin(0, 0);
+        curShip = this.getRandomShip([regShip, specShip]);
+        this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 0, curShip).setOrigin(0,0);
+        curShip = this.getRandomShip([regShip, specShip]);
+        this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 0, curShip).setOrigin(0,0);
           // define keys
         keyF = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
         keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
@@ -91,6 +105,14 @@ class Play extends Phaser.Scene{
             this.scene.start("menuScene");
         }
     }
+    getRandomShip(shipArr) {
+        let selShip = shipArr[Math.floor(Math.random() * shipArr.length)];
+        if(selShip == regShip){
+            selShip.pointVal = Math.floor(Math.random() * (40 - 10) + 10);
+            selShip.pointVal -= selShip.pointVal % 10;
+        }
+        return selShip;
+    }
     checkCollision(rocket, ship) {
         // simple AABB checking
         if (rocket.x < ship.x + ship.width && 
@@ -105,16 +127,19 @@ class Play extends Phaser.Scene{
     shipExplode(ship) {
         // temporarily hide ship
         ship.alpha = 0;
-        // create explosion sprite at ship's position
+        let curShip = this.getRandomShip([regShip, specShip]);
         let boom = this.add.sprite(ship.x, ship.y, 'explosion').setOrigin(0, 0);
         boom.anims.play('explode');             // play explode animation
         boom.on('animationcomplete', () => {    // callback after anim completes
           ship.reset();                         // reset ship position
+          ship.texture =  curShip.texture;
+          ship.points = curShip.pointVal;
+          ship.moveSpeed = game.settings.spaceshipSpeed + curShip.moveSpdMod;
           ship.alpha = 1;                       // make ship visible again
           boom.destroy();                       // remove explosion sprite
         });
         this.p1Score += ship.points;
         this.scoreLeft.text = this.p1Score;
         this.sound.play('sfx_explosion');
-      }
+    }
 }
