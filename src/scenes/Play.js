@@ -25,13 +25,6 @@ class Play extends Phaser.Scene{
         this.starfield = this.add.tileSprite(0, 0, 640, 480, 'starfield').setOrigin(0, 0);
         // green UI background
         this.add.rectangle(0, borderUISize + borderPadding, game.config.width, borderUISize * 2, 0x00FF00).setOrigin(0, 0);
-        // white borders
-        this.add.rectangle(0, 0, game.config.width, borderUISize, 0xFFFFFF).setOrigin(0, 0);
-        this.add.rectangle(0, game.config.height - borderUISize, game.config.width, borderUISize, 0xFFFFFF).setOrigin(0, 0);
-        this.add.rectangle(0, 0, borderUISize, game.config.height, 0xFFFFFF).setOrigin(0, 0);
-        this.add.rectangle(game.config.width - borderUISize, 0, borderUISize, game.config.height, 0xFFFFFF).setOrigin(0, 0);
-        // add rocket (p1)
-        this.p1Rocket = new Rocket(this, game.config.width/2, game.config.height - borderUISize - borderPadding, 'rocket').setOrigin(0.5, 0);
         // add spaceships (x3)
         let curShip = this.getRandomShip([regShip, specShip]);
         this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 0, curShip).setOrigin(0, 0);
@@ -39,6 +32,18 @@ class Play extends Phaser.Scene{
         this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 0, curShip).setOrigin(0,0);
         curShip = this.getRandomShip([regShip, specShip]);
         this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 0, curShip).setOrigin(0,0);
+        // white borders
+        // this.add.rectangle(0, 0, game.config.width, borderUISize, 0x000000).setOrigin(0, 0);
+        // this.add.rectangle(0, game.config.height - borderUISize, game.config.width, borderUISize, 0x000000).setOrigin(0, 0);
+        // this.add.rectangle(0, 0, borderUISize, game.config.height, 0x000000).setOrigin(0, 0);
+        // this.add.rectangle(game.config.width - borderUISize, 0, borderUISize, game.config.height, 0x000000).setOrigin(0, 0);
+        // add rocket (p1)
+        this.p1Rocket = new Rocket(this, game.config.width/2, game.config.height - borderUISize - borderPadding, 'rocket').setOrigin(0.5, 0);
+        this.p1Rocket.inputEnabled = true;
+        // add mouse
+        this.input.on('pointerup', function() {
+            this.clicked = true;
+        });
           // define keys
         keyF = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
         keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
@@ -77,12 +82,17 @@ class Play extends Phaser.Scene{
         }, null, this);
     }
     update(){
+        let mouse = this.input.activePointer;
+        let clicked = false;
+        if(mouse.leftButtonDown()){
+            clicked = true;
+        }
         if(this.gameOver && Phaser.Input.Keyboard.JustDown(keyR)){
             this.scene.restart();
         }
         this.starfield.tilePositionX -= 4;
         if(!this.gameOver){
-            this.p1Rocket.update();
+            this.p1Rocket.update(clicked);
             this.ship01.update();
             this.ship02.update();
             this.ship03.update();
@@ -94,24 +104,18 @@ class Play extends Phaser.Scene{
             this.shipExplode(this.ship03);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 0, newShip).setOrigin(0,0);
-            console.log(this.clock);
-            this.clock += 1000;
         }
         if (this.checkCollision(this.p1Rocket, this.ship02)) {
             this.p1Rocket.reset();
             this.shipExplode(this.ship02);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 0, newShip).setOrigin(0,0);
-            console.log(this.clock);
-            this.clock += 1000;
         }
         if (this.checkCollision(this.p1Rocket, this.ship01)) {
             this.p1Rocket.reset();
             this.shipExplode(this.ship01);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 0, newShip).setOrigin(0, 0);
-            console.log(this.clock);
-            this.clock += 1000;
         }
         if (this.gameOver && Phaser.Input.Keyboard.JustDown(keyLEFT)) {
             this.scene.start("menuScene");
