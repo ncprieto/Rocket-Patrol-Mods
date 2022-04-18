@@ -11,6 +11,8 @@ class Rocket extends Phaser.GameObjects.Sprite {
     }
     update(clicked){
       if(!this.isFiring){
+        // rocket x position is determined using the x position of the mouse
+        // and is affected by the border size and the width of the rocket
         if(game.input.mousePointer.x <= borderUISize + this.width){
           this.x = borderUISize + this.width;
         }
@@ -29,8 +31,8 @@ class Rocket extends Phaser.GameObjects.Sprite {
         this.y -= this.moveSpeed;
       }
       if(this.y <= borderUISize * 3 + borderPadding){
-        this.isFiring = false;
-        this.y = game.config.height - borderUISize - borderPadding;
+        this.reset();
+        return true;
       }
     }
     reset(){

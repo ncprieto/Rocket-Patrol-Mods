@@ -8,6 +8,8 @@ let specShip = {
     pointVal: 60,
     moveSpdMod: 1
 };
+let sfxArr = ['sfx_explosion1', 'sfx_explosion2', 'sfx_explosion3', 'sfx_explosion4'];
+let hitCount = 0;
 class Play extends Phaser.Scene{
     constructor(){
         super("playScene");
@@ -18,7 +20,7 @@ class Play extends Phaser.Scene{
         this.load.image('spaceship2', './assets/spaceship2.png');
         this.load.image('starfield', './assets/starfield.png');
         // load spritesheet
-        this.load.spritesheet('explosion', './assets/explosion.png', {frameWidth: 64, frameHeight: 32, startFrame: 0, endFrame: 9});
+        this.load.spritesheet('explosion', './assets/explosion.png', {frameWidth: 64, frameHeight: 32, startFrame: 0, endFrame: 4});
     }
     create(){
         // place tile sprite
@@ -32,31 +34,19 @@ class Play extends Phaser.Scene{
         this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 0, curShip).setOrigin(0,0);
         curShip = this.getRandomShip([regShip, specShip]);
         this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 0, curShip).setOrigin(0,0);
-        // white borders
-        // this.add.rectangle(0, 0, game.config.width, borderUISize, 0x000000).setOrigin(0, 0);
-        // this.add.rectangle(0, game.config.height - borderUISize, game.config.width, borderUISize, 0x000000).setOrigin(0, 0);
-        // this.add.rectangle(0, 0, borderUISize, game.config.height, 0x000000).setOrigin(0, 0);
-        // this.add.rectangle(game.config.width - borderUISize, 0, borderUISize, game.config.height, 0x000000).setOrigin(0, 0);
         // add rocket (p1)
         this.p1Rocket = new Rocket(this, game.config.width/2, game.config.height - borderUISize - borderPadding, 'rocket').setOrigin(0.5, 0);
-        this.p1Rocket.inputEnabled = true;
-        // add mouse
-        this.input.on('pointerup', function() {
-            this.clicked = true;
-        });
-          // define keys
-        keyF = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+        // define keys
         keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
         keyLEFT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
-        keyRIGHT = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
         // animation config
         this.anims.create({
             key: 'explode',
-            frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 9, first: 0}),
+            frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 4, first: 0}),
             frameRate: 30
         });
         this.p1Score = 0;
-          // display score
+        // display score
         let scoreConfig = {
             fontFamily: 'Courier',
             fontSize: '28px',
@@ -73,17 +63,30 @@ class Play extends Phaser.Scene{
         // game over flag 
         this.gameOver = false;
         // 60-second play clock
-        // clock
         scoreConfig.fixedWidth = 0;
         this.clock = this.time.delayedCall(game.settings.gameTimer, () => {
             this.add.text(game.config.width/2, game.config.height/2, 'GAME OVER', scoreConfig).setOrigin(0.5);
             this.add.text(game.config.width/2, game.config.height/2 + 64, 'Press (R) to Restart or ← for menu', scoreConfig).setOrigin(0.5);
             this.gameOver = true;
         }, null, this);
+        // clock display 
+        this.timeLeft = 0;
+        this.clockDisplay = this.add.text(borderPadding*50 + borderUISize, borderUISize + borderPadding*2, this.timeLeft, scoreConfig)
     }
     update(){
+        //update clock
+        let secMod = this.clock.elapsed - (this.clock.elapsed % 1000);
+        this.timeLeft = (this.clock.delay - secMod) / 1000;
+        this.clockDisplay.text = this.timeLeft;
+        // define mouse for reading inputs
         let mouse = this.input.activePointer;
+        // the variable clicked is essentially a flag that tells
+        // rocket.update() if the left mouse was clicked
         let clicked = false;
+        // return value of update() is stored in missed
+        // if the rocket reached the green UI border then it missed
+        // if it did not then we can assume that it hit a spaceship
+        let missed;
         if(mouse.leftButtonDown()){
             clicked = true;
         }
@@ -92,35 +95,53 @@ class Play extends Phaser.Scene{
         }
         this.starfield.tilePositionX -= 4;
         if(!this.gameOver){
-            this.p1Rocket.update(clicked);
+            missed = this.p1Rocket.update(clicked);
             this.ship01.update();
             this.ship02.update();
             this.ship03.update();
         }
-        
-        // check collisions
         if(this.checkCollision(this.p1Rocket, this.ship03)) {
             this.p1Rocket.reset();
             this.shipExplode(this.ship03);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship03 = new Spaceship(this, game.config.width, borderUISize*6 + borderPadding*4, 0, newShip).setOrigin(0,0);
+            hitCount += 1;
+            missed = false;
         }
         if (this.checkCollision(this.p1Rocket, this.ship02)) {
             this.p1Rocket.reset();
             this.shipExplode(this.ship02);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship02 = new Spaceship(this, game.config.width + borderUISize*3, borderUISize*5 + borderPadding*2, 0, newShip).setOrigin(0,0);
+            hitCount += 1;
+            missed = false;
         }
         if (this.checkCollision(this.p1Rocket, this.ship01)) {
             this.p1Rocket.reset();
             this.shipExplode(this.ship01);
             let newShip = this.getRandomShip([regShip, specShip]);
             this.ship01 = new Spaceship(this, game.config.width + borderUISize*6, borderUISize*4, 0, newShip).setOrigin(0, 0);
+            hitCount += 1;
+            missed = false;
+        }
+        // if missed is false meaning that a collision was detected
+        // and the hitcount % 3 == 0 then when add one second to the game clock
+        if(missed == false){
+            if(hitCount % 2 == 0 && hitCount > 0){
+                this.clock.delay += 1000;
+            }
+        }
+        // if the player missed then we set this successive hit counter to 0
+        else if(missed){
+            hitCount = 0;
         }
         if (this.gameOver && Phaser.Input.Keyboard.JustDown(keyLEFT)) {
             this.scene.start("menuScene");
         }
     }
+    // getRandomShip() randomly chooses a ship based on the provided array
+    // it also calculates the point value of the regular ship and returns
+    // the randomly selected ship
     getRandomShip(shipArr) {
         let selShip = shipArr[Math.floor(Math.random() * shipArr.length)];
         if(selShip == regShip){
@@ -146,12 +167,13 @@ class Play extends Phaser.Scene{
         let boom = this.add.sprite(ship.x, ship.y, 'explosion').setOrigin(0, 0);
         boom.anims.play('explode');             // play explode animation
         boom.on('animationcomplete', () => {    // callback after anim completes
-            ship.reset();                // reset ship position
-            ship.alpha = 1;                   // make ship visible again
-            boom.destroy();                       // remove explosion sprite
+            ship.reset();                       // reset ship position
+            ship.alpha = 1;                     // make ship visible again
+            boom.destroy();                     // remove explosion sprite
         });
         this.p1Score += ship.points;
         this.scoreLeft.text = this.p1Score;
-        this.sound.play('sfx_explosion');
+        let sfx_explode_sound = sfxArr[Math.floor(Math.random() * sfxArr.length)]; // choose random sound from array of sfx
+        this.sound.play(sfx_explode_sound);
     }
 }
